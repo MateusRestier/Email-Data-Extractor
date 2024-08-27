@@ -23,7 +23,7 @@ remetentes_excluidos = [
     "crystiano.bento@bagaggio.com.br", "douglas.franca@bagaggio.com.br", "guilherme.almeida@bagaggio.com.br", 
     "juliana.almeida@bagaggio.com.br", "julio.correia@bagaggio.com.br", "matheus.silva@bagaggio.com.br", 
     "monique.barbosa@bagaggio.com.br", "pedro.rufino@bagaggio.com.br", "thamirys.abreu@bagaggio.com.br", 
-    "vanessa.rebello@bagaggio.com.br", "centraldenotasbagaggio@outlook.com"#, "mateus.restier@bagaggio.com.br"
+    "vanessa.rebello@bagaggio.com.br", "centraldenotasbagaggio@outlook.com", "centraldenotas@bagaggio.com.br"#, "mateus.restier@bagaggio.com.br"
 ]
 
 def set_date_format(excel_path):
