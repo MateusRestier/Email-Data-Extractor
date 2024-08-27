@@ -11,6 +11,7 @@ from openpyxl import load_workbook
 from datetime import timedelta
 import tkinter as tk
 import threading
+from openpyxl.styles import NamedStyle
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -22,8 +23,27 @@ remetentes_excluidos = [
     "crystiano.bento@bagaggio.com.br", "douglas.franca@bagaggio.com.br", "guilherme.almeida@bagaggio.com.br", 
     "juliana.almeida@bagaggio.com.br", "julio.correia@bagaggio.com.br", "matheus.silva@bagaggio.com.br", 
     "monique.barbosa@bagaggio.com.br", "pedro.rufino@bagaggio.com.br", "thamirys.abreu@bagaggio.com.br", 
-    "vanessa.rebello@bagaggio.com.br"#, "mateus.restier@bagaggio.com.br"
+    "vanessa.rebello@bagaggio.com.br", "centraldenotasbagaggio@outlook.com"#, "mateus.restier@bagaggio.com.br"
 ]
+
+def set_date_format(excel_path):
+    # Abrir o arquivo Excel existente
+    wb = load_workbook(excel_path)
+    ws = wb.active
+
+    # Criar um estilo de data com o formato DD/MM/YYYY
+    date_style = NamedStyle(name="date_style", number_format="DD/MM/YYYY")
+
+    # Aplicar o estilo de data às colunas de data (assumindo que Data está na coluna B, Data Devolução na C e Correção de Nota na D)
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=2, max_col=4):  # B até D
+        for cell in row:
+            if cell.value is not None:
+                cell.style = date_style
+
+    # Salvar as alterações
+    wb.save(excel_path)
+    wb.close()
+
 
 # Função de log para o console
 def log(message, log_widget=None):
@@ -432,6 +452,9 @@ def consolidar_arquivos_excel(folder_path, data_formatada):
         
         # Ajustar as larguras das colunas do arquivo consolidado
         set_fixed_column_widths(consolidated_filepath)
+
+        # Aplicar o formato de data no arquivo consolidado
+        set_date_format(consolidated_filepath)  # Adicionar essa linha para aplicar o formato de data
     else:
         print("Nenhum arquivo Excel disponível para consolidação.")
 
@@ -448,14 +471,19 @@ def tratamento_dados(email_data, output_file_path, folder_path, data_formatada):
     # Mover a coluna "Correção de Nota" para a posição correta
     df = move_correction_column(df)
 
-    # Converter 'Data Devolução' para datetime64 se ainda não estiver
+    # Converter 'Data Devolução', 'Data', e 'Correção de Nota' para datetime64
     df['Data Devolução'] = pd.to_datetime(df['Data Devolução'], errors='coerce')
-    
+    df['Data'] = pd.to_datetime(df['Data'], errors='coerce')
+    df['Correção de Nota'] = pd.to_datetime(df['Correção de Nota'], errors='coerce')
+
     # Substituir por NaT ao invés de string vazia para valores nulos de data
     df.loc[df['Correção de Nota'].notna() & (df['Correção de Nota'] != ''), 'Data Devolução'] = pd.NaT
 
     # Salvar as alterações com a coluna movida
     df.to_excel(output_file_path, index=False)
+
+    # Aplicar o formato de data no Excel
+    set_date_format(output_file_path)
 
     # Definir larguras fixas para as colunas
     set_fixed_column_widths(output_file_path)
@@ -536,7 +564,6 @@ def main(data_formatada, log_text_widget):
     tratamento_dados(email_data, output_file_path, dynamic_folder_path, data_formatada)
 
     log(f"\nConexão ao servidor fechada. Arquivo salvo em: {output_file_path}", log_text_widget)
-
 
 if __name__ == "__main__":
     abrir_janela()
