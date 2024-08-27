@@ -13,9 +13,8 @@ import tkinter as tk
 import threading
 from openpyxl.styles import NamedStyle
 from dotenv import load_dotenv
-load_dotenv()
 
-
+load_dotenv() # Carregar as variáveis de ambiente do arquivo .env
 
 # Lista de remetentes que não devem ser marcados como correção de nota
 remetentes_excluidos = [
@@ -43,7 +42,6 @@ def set_date_format(excel_path):
     # Salvar as alterações
     wb.save(excel_path)
     wb.close()
-
 
 # Função de log para o console
 def log(message, log_widget=None):
@@ -128,44 +126,45 @@ def abrir_janela():
     janela.mainloop()
 
 # Função para tentar conexão IMAP
-def connect_to_imap(email_user, email_pass, log_widget=None):
+def connect_to_imap(email_user, email_pass, log_text_widget):
     servidores_imap = [
         "outlook.office365.com",
         "imap-mail.outlook.com",
         "smtp-mail.outlook.com"
     ]
     for servidor in servidores_imap:
-        log(f"\n\n\nTentando conexão IMAP com o servidor: {servidor} e email: {email_user}", log_widget)
+        log(f"\n\nTentando conexão IMAP com o servidor: {servidor} e email: {email_user}", log_text_widget)
         try:
             mail = imaplib.IMAP4_SSL(servidor)
             mail.login(email_user, email_pass)
-            log(f"\nConectado com sucesso à conta {email_user} via IMAP no servidor {servidor}", log_widget)
+            log(f"\nConectado com sucesso à conta {email_user} via IMAP no servidor {servidor}", log_text_widget)
             return mail, 'IMAP'
         except imaplib.IMAP4.error as e:
-            log(f"Erro de autenticação IMAP com o servidor {servidor}: {e}", log_widget)
+            log(f"Erro de autenticação IMAP com o servidor {servidor}: {e}", log_text_widget)
         except Exception as e:
-            log(f"Erro desconhecido ao tentar o servidor IMAP {servidor}: {e}", log_widget)
-    log("\nFalha ao conectar via IMAP.", log_widget)
+            log(f"Erro desconhecido ao tentar o servidor IMAP {servidor}: {e}", log_text_widget)
+    log("\nFalha ao conectar via IMAP.", log_text_widget)
     return None, None
+
 # Função para tentar conexão POP3
-def connect_to_pop(email_user, email_pass):
+def connect_to_pop(email_user, email_pass, log_text_widget):
     servidores_pop3 = [
         "smtp-mail.outlook.com",
         "outlook.office365.com",
         "pop-mail.outlook.com"
     ]
     for servidor in servidores_pop3:
-        log(f"\n\n\nTentando conexão POP3 com o servidor: {servidor} e email: {email_user}")
+        log(f"\n\n\nTentando conexão POP3 com o servidor: {servidor} e email: {email_user}", log_text_widget)
         try:
             mail = poplib.POP3_SSL(servidor)
             mail.user(email_user)
             mail.pass_(email_pass)
-            log(f"\nConectado com sucesso à conta {email_user} via POP3 no servidor {servidor}")
+            log(f"\nConectado com sucesso à conta {email_user} via POP3 no servidor {servidor}", log_text_widget)
             return mail, 'POP3'
         except poplib.error_proto as e:
-            log(f"Erro de autenticação POP3 com o servidor {servidor}: {e}")
+            log(f"Erro de autenticação POP3 com o servidor {servidor}: {e}", log_text_widget)
         except Exception as e:
-            log(f"Erro desconhecido ao tentar o servidor POP3 {servidor}: {e}")
+            log(f"Erro desconhecido ao tentar o servidor POP3 {servidor}: {e}", log_text_widget)
     log("\nFalha ao conectar via POP3.\n")
     return None, None
 
@@ -372,12 +371,12 @@ def convert_excel_dates(output_file_path):
     log(f"Datas convertidas e arquivo salvo com sucesso em {output_file_path}!")
 
 # Função principal para orquestrar o processo para um email específico
-def process_email_account(email_user, email_pass, email_label, data_formatada):
+def process_email_account(email_user, email_pass, email_label, data_formatada, log_text_widget):
     # Tentar conexão via IMAP
-    mail, protocol = connect_to_imap(email_user, email_pass)
+    mail, protocol = connect_to_imap(email_user, email_pass, log_text_widget)
     if mail is None:
         # Se a conexão IMAP falhar, tentar via POP3
-        mail, protocol = connect_to_pop(email_user, email_pass)
+        mail, protocol = connect_to_pop(email_user, email_pass, log_text_widget)
         if mail is None:
             log(f"Falha ao conectar via IMAP e POP3 para {email_user}.")
             return []
@@ -407,7 +406,7 @@ def process_email_account(email_user, email_pass, email_label, data_formatada):
 
     return email_data
 
-def consolidar_arquivos_excel(folder_path, data_formatada):
+def consolidar_arquivos_excel(folder_path, data_formatada, log_text_widget):
     """
     Consolida todos os arquivos Excel na pasta fornecida e salva como um novo arquivo consolidado.
     
@@ -423,9 +422,9 @@ def consolidar_arquivos_excel(folder_path, data_formatada):
         if file.startswith("Mapeamento_Notas_Fiscais_Consolidado"):
             try:
                 os.remove(os.path.join(folder_path, file))
-                print(f"Arquivo consolidado antigo '{file}' removido com sucesso.")
+                log(f"\n\n\nArquivo consolidado antigo '{file}' removido com sucesso.", log_text_widget)
             except Exception as e:
-                print(f"Não foi possível remover o arquivo '{file}': {e}. Ignorando e seguindo para o próximo.")
+                log(f"\n\n\nNão foi possível remover o arquivo '{file}': {e}. Ignorando e seguindo para o próximo.", log_text_widget)
 
     # Consolidar todos os arquivos Excel (exceto os consolidados)
     excel_files = [f for f in os.listdir(folder_path) if f.endswith('.xlsx') and "Consolidado" not in f]
@@ -433,14 +432,16 @@ def consolidar_arquivos_excel(folder_path, data_formatada):
     # Lista para armazenar os DataFrames
     dfs = []
     
+    log(f"\n\nOs arquivos abaixo, serão adicionados ao Consolidado:\n", log_text_widget)
     for excel_file in excel_files:
         file_path = os.path.join(folder_path, excel_file)
         try:
             df = pd.read_excel(file_path)
             dfs.append(df)
-            print(f"Arquivo '{excel_file}' adicionado ao consolidado.")
+            log(f"{excel_file}.", log_text_widget)
         except Exception as e:
-            print(f"Erro ao ler o arquivo '{excel_file}': {e}. Ignorando este arquivo.")
+            log(f"Erro ao ler o arquivo '{excel_file}': {e}. Ignorando este arquivo.", log_text_widget)
+    log("\n", log_text_widget)
     
     if dfs:
         # Concatenar todos os DataFrames
@@ -448,7 +449,7 @@ def consolidar_arquivos_excel(folder_path, data_formatada):
         
         # Salvar o DataFrame consolidado como um novo arquivo Excel
         consolidated_df.to_excel(consolidated_filepath, index=False)
-        print(f"Arquivo consolidado salvo com sucesso em: {consolidated_filepath}")
+        log(f"\nArquivo consolidado salvo com sucesso em: {consolidated_filepath}", log_text_widget)
         
         # Ajustar as larguras das colunas do arquivo consolidado
         set_fixed_column_widths(consolidated_filepath)
@@ -456,9 +457,9 @@ def consolidar_arquivos_excel(folder_path, data_formatada):
         # Aplicar o formato de data no arquivo consolidado
         set_date_format(consolidated_filepath)  # Adicionar essa linha para aplicar o formato de data
     else:
-        print("Nenhum arquivo Excel disponível para consolidação.")
+        log("Nenhum arquivo Excel disponível para consolidação.", log_text_widget)
 
-def tratamento_dados(email_data, output_file_path, folder_path, data_formatada):
+def tratamento_dados(email_data, output_file_path, folder_path, data_formatada, log_text_widget):
     # Salvar os dados no Excel, adicionando a nova coluna 'Origem do Email'
     save_to_excel(email_data, output_file_path)
 
@@ -489,8 +490,7 @@ def tratamento_dados(email_data, output_file_path, folder_path, data_formatada):
     set_fixed_column_widths(output_file_path)
     
     # Consolidar arquivos Excel
-    consolidar_arquivos_excel(folder_path, data_formatada)
-
+    consolidar_arquivos_excel(folder_path, data_formatada, log_text_widget)
 
 def formatar_data(data):
     try:
@@ -499,7 +499,7 @@ def formatar_data(data):
     except ValueError:
         return None
 
-def create_dynamic_folders(base_dir, data_formatada):
+def create_dynamic_folders(base_dir, data_formatada, log_text_widget):
     """
     Cria pastas dinâmicas para ano e mês com base na data fornecida.
 
@@ -516,20 +516,20 @@ def create_dynamic_folders(base_dir, data_formatada):
     ano_folder = os.path.join(base_dir, ano)
     if not os.path.exists(ano_folder):
         os.makedirs(ano_folder)
-        print(f"Pasta do ano '{ano}' criada.")
+        log(f"Pasta do ano '{ano}' criada.", log_text_widget)
 
     # Criar a pasta do mês dentro da pasta do ano
     mes_folder = os.path.join(ano_folder, mes)
     if not os.path.exists(mes_folder):
         os.makedirs(mes_folder)
-        print(f"Pasta do mês '{mes}' criada dentro da pasta '{ano}'.")
+        log(f"Pasta do mês '{mes}' criada dentro da pasta '{ano}'.", log_text_widget)
 
     # Retornar o caminho da pasta final onde o arquivo será salvo
     return mes_folder
 
 # Função principal para orquestrar o processo
 def main(data_formatada, log_text_widget):
-    log("\n\nＭａｐｅａｍｅｎｔｏ ｄｅ Ｎｏｔａｓ Ｆｉｓｃａｉｓ", log_text_widget)
+    log("\nＭａｐｅａｍｅｎｔｏ ｄｅ Ｎｏｔａｓ Ｆｉｓｃａｉｓ", log_text_widget)
     script_dir = os.getcwd()  # Pega o diretório atual onde o executável está sendo executado
     
     # Definir as credenciais dos dois emails
@@ -542,8 +542,8 @@ def main(data_formatada, log_text_widget):
     email_label_2 = "Devolução de Notas"
 
     # Processar os dois emails
-    email_data_1 = process_email_account(email_user_1, email_pass_1, email_label_1, data_formatada)
-    email_data_2 = process_email_account(email_user_2, email_pass_2, email_label_2, data_formatada)
+    email_data_1 = process_email_account(email_user_1, email_pass_1, email_label_1, data_formatada, log_text_widget)
+    email_data_2 = process_email_account(email_user_2, email_pass_2, email_label_2, data_formatada, log_text_widget)
 
     # Juntar os dados
     email_data = email_data_1 + email_data_2
@@ -554,16 +554,16 @@ def main(data_formatada, log_text_widget):
         os.makedirs(output_directory)
 
     # Criar pastas dinâmicas e obter o caminho final
-    dynamic_folder_path = create_dynamic_folders(output_directory, data_formatada)
+    dynamic_folder_path = create_dynamic_folders(output_directory, data_formatada, log_text_widget)
 
     # Definir o caminho completo do arquivo com o diretório correto
     output_file_name = f"Mapeamento_Notas_Fiscais_{data_formatada}.xlsx"
     output_file_path = os.path.join(dynamic_folder_path, output_file_name)
 
     # Chamar a função de tratamento de dados
-    tratamento_dados(email_data, output_file_path, dynamic_folder_path, data_formatada)
+    tratamento_dados(email_data, output_file_path, dynamic_folder_path, data_formatada, log_text_widget)
 
-    log(f"\nConexão ao servidor fechada. Arquivo salvo em: {output_file_path}", log_text_widget)
+    log(f"\nConexão ao servidor fechada. \nArquivo salvo em: {output_file_path}", log_text_widget)
 
 if __name__ == "__main__":
     abrir_janela()
