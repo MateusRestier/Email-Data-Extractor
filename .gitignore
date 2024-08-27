@@ -1,0 +1,6 @@
+.env
+Excel
+venv
+dist
+build
+imap_and_pop_connection.spec
