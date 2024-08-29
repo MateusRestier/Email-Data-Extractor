@@ -297,7 +297,11 @@ def convert_excel_dates(output_file_path):
         if pd.isna(date_string) or date_string == "":
             return date_string  # Se for NaN ou string vazia, retorna como está
         try:
-            # Parse da string de data no formato 'Fri, 16 Aug 2024 15:04:39 +0000'
+            # Remover o sufixo (UTC) ou qualquer coisa entre parênteses
+            if '(' in date_string:
+                date_string = date_string.split('(')[0].strip()
+            
+            # Parse da string de data no formato 'Wed, 28 Aug 2024 20:44:33 +0000'
             parsed_date = datetime.strptime(date_string, "%a, %d %b %Y %H:%M:%S %z")
             # Retornar a data no formato 'YYYY-MM-DD'
             return parsed_date.strftime("%Y-%m-%d")
